@@ -55,7 +55,7 @@ call random_seed(put=values(7:8))
 !
 !*****************************************************************************
 CALL get_environment_variable("PBS_JOBID",filename)
-write(6,*) "Do you have an input file? y or n"
+write(*,*) "Do you have an input file? y or n"
 read(*,*) input
 
 !  not yet able to read in an input file
@@ -63,18 +63,26 @@ read(*,*) input
 if (input == "y") then
   write(*,*) "input file name?"
   read(*,*) infile
+  write(*,*) infile
   open(20,file=infile)
   read(20,"(1I10)") ncycle ! # of production cycles
   read(20,"(1I10)") neq    ! # of equillibrium cycles
   read(20,"(1I10)") nbin   ! # of density histogram bins
-!  read(20,"(F25.0)") rho  ! average density of entire cell
   read(20,"(1I10)") npart
   read(20,"(F25.0)") ly   ! length of the hard wall sides of the sim box
   read(20,"(f25.0)") lx   ! length of the open sides of the sim box
   read(20,"(f25.0)") movemax  ! max MC step size
   read(20,"(1I10)") ibinmin  ! first histogram bin of the bulk region
   read(20,"(1F15.0)") rv  ! verlet neighbor list radius
-  write(*,*) ncycle,neq,nbin,rho,ly,lx,movemax,ibinmin,rv
+  write(6,"(A15,1I10)") 'prod_cycles',ncycle ! # of production cycles
+  write(6,"(A15,1I10)") 'eq_cycles',neq    ! # of equillibrium cycles
+  write(6,"(A15,1I10)") 'bins',nbin   ! # of density histogram bins
+  write(6,"(A15,1I10)") 'particles',npart
+  write(6,"(A15,F10.2)") 'y',ly   ! length of the hard wall sides of the sim box
+  write(6,"(A15,F10.2)") 'x',lx   ! length of the open sides of the sim box
+  write(6,"(A15,F10.2)") 'move_max',movemax  ! max MC step size
+  write(6,"(A15,1I10)") 'bulkbin',ibinmin  ! first histogram bin of the bulk region
+  write(6,"(A15,1F10.2)") 'verlet_radius',rv  ! verlet neighbor list radius
   update = .true.     ! update==true means that the neighbor lists need updated
                       ! and triggers a call to the appropriate subroutine
 !  npart = nint(rho*ly*lx)  ! # of particles in the simulation cell
@@ -113,7 +121,7 @@ if (input == "y") then
                !acceptance ratio
   nsamp = 0
   
-  print *, "nparts = ",npart
+!  print *, "nparts = ",npart
   ndens = 0
   instdens = 0
   chunkdens = 0
@@ -122,10 +130,9 @@ if (input == "y") then
   close(20)
   open(60,file=incoords)
   do i = 1,npart
-    read(60,"(2F16.0)") coords(i,1),coords(i,2)
+    read(60,100) coords(i,1),coords(i,2)
   enddo
   close(60)
-!  print *, coords
 !  stop
 else
   if (input == "n") then
@@ -135,13 +142,14 @@ else
   endif
   write(6,*) "enter: prod. cycles, eq. cycles, nbin, rho, ly, lx, movemax, ibinmin, verlet radius"
   read(5,*) ncycle,neq,nbin,rho,ly,lx,movemax,ibinmin,rv
-  write(6,*) ncycle,neq,nbin,rho,ly,lx,movemax,ibinmin,rv
+  
  
   update = .true.     ! update==true means that the neighbor lists need updated
                       ! and triggers a call to the appropriate subroutine
   npart = nint(rho*ly*lx)  ! # of particles in the simulation cell
   ibinmax = nbin-ibinmin+1  ! mirror of ibinmin
   listmax = int(rho*npart*4*rv**2)  ! sets the maximum size of the neighbor list
+
   allocate(coords(npart,2))      ! current particle coordinates
   allocate(ocoords(npart,2))     ! particle coordinates at the time of the last
                                  !   verlet list udate
@@ -167,16 +175,15 @@ else
   binvol = lx*bin         ! volume of each bin
   nsteps = ncycle*npart   ! # of production steps
   
-  !write(6,*) 'npart = ',npart
-  !write(6,*) 'ncycle = ',ncycle
-  !write(6,*) 'neq = ',neq
-  !write(6,*) 'rho = ',rho
-  !write(6,*) 'ly = ',ly
-  !write(6,*) 'lx = ',lx
-  !write(6,*) 'bin = ',bin
-  !write(6,*) 'nbin = ',nbin
-  !write(6,*) 'binvol = ',binvol
-  !write(6,*) 'ibimmin, ibinmax = ',ibinmin,ibinmax
+  write(6,"(A15,1I10)") 'prod_cycles',ncycle ! # of production cycles
+  write(6,"(A15,1I10)") 'eq_cycles',neq    ! # of equillibrium cycles
+  write(6,"(A15,1I10)") 'bins',nbin   ! # of density histogram bins
+  write(6,"(A15,1I10)") 'particles',npart
+  write(6,"(A15,F10.2)") 'y',ly   ! length of the hard wall sides of the sim box
+  write(6,"(A15,F10.2)") 'x',lx   ! length of the open sides of the sim box
+  write(6,"(A15,F10.2)") 'move_max',movemax  ! max MC step size
+  write(6,"(A15,1I10)") 'bulkbin',ibinmin  ! first histogram bin of the bulk region
+  write(6,"(A15,1F10.2)") 'verlet_radius',rv  ! verlet neighbor list radius
   
   nupdate = 0     ! tracks the number of times the verlet list is updated
 !  neqstep = neq*npart  deprecated; number of equillibrium particle moves 
@@ -217,6 +224,7 @@ open(40, file=densfile)
 open(80, file=volfile)
 update = .true.
 call verlet(update,rv,npart,coords,ocoords,vlist,point,lx,listmax)
+
 print *, 'starting MC steps'
 do icycle = 1,ncycle + neq
   call cpu_time(cstart)
@@ -376,27 +384,19 @@ enddo
 
 close(21)
 
-write(6,*) '# particles = ',npart
-write(6,*) '# rho = ',rho
-write(6,*) '# ly = ',ly
-write(6,*) '# lx = ',lx
 write(6,*) '# bulk density = ',rhoave
 write(6,*) '# v_excess = ',vxs
-write(6,*) '# interface volume = ',v
-write(6,*) '# interface particles = ',nface
-write(6,*) '# eq. cycles = ',neq
-write(6,*) '# prod. cycles = ',nsamp
-write(6,*) "impact time = ",tottime
-write(6,*) "max vlist time = ", vtimemax
-write(6,*) "list update time = ",vtime
-write(6,*) "check time = ",ctime
+write(6,*) "# impact time = ",tottime
+write(6,*) "# max vlist time = ", vtimemax
+write(6,*) "# list update time = ",vtime
+write(6,*) "# check time = ",ctime
 write(6,*) "# of checks = ",chkcount
 write(6,*) "# of vlist updates = ",vlcount
 
 !
 !     output acceptance ratio
 !
-write(6,*) "acceptance ratio = ",dble(iaccept)/dble(nsteps)
+write(6,*) "# acceptance ratio = ",dble(iaccept)/dble(nsteps)
 100  format(3F18.7)
 200  format(3A18)
 300  format(10000F20.16)
