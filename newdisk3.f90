@@ -221,27 +221,27 @@ endif
 densfile = trim(filename)//"dens.dat"
 volfile = trim(filename)//"vol.dat"
 open(40, file=densfile)
-open(80, file=volfile)
+!open(80, file=volfile)
 update = .true.
 call verlet(update,rv,npart,coords,ocoords,vlist,point,lx,listmax)
 
 print *, 'starting MC steps'
 do icycle = 1,ncycle + neq
-  call cpu_time(cstart)
+!  call cpu_time(cstart)
   call check(npart,coords,ocoords,rv,update,lx2)
-  call cpu_time(cfin)
-  ctimer = cfin-cstart
-  ctime = ctime + ctimer
+!  call cpu_time(cfin)
+!  ctimer = cfin-cstart
+!  ctime = ctime + ctimer
   chkcount = chkcount + 1
-  call cpu_time(vstart)
+!  call cpu_time(vstart)
   if (update) then
     vlcount = vlcount + 1
     call verlet(update,rv,npart,coords,ocoords,vlist,point,lx,listmax)
   endif
-  call cpu_time(vfin)
-  vtimer = vfin-vstart
-  vtimemax = max(vtimemax,vtimer)
-  vtime = vtime + vtimer
+!  call cpu_time(vfin)
+!  vtimer = vfin-vstart
+!  vtimemax = max(vtimemax,vtimer)
+!  vtime = vtime + vtimer
   do istep = 1,npart
   !  if(mod(istep,(nsteps+neqstep)/10).eq.0) then
   !    write(6,*) (istep-neqstep)/npart
@@ -284,7 +284,7 @@ do icycle = 1,ncycle + neq
   !   write(6,'(50F8.3)') coords(:,1)
   !   write(6,'(50F8.3)') coords(:,2)
   !   read *
-    call cpu_time(tstart)
+!    call cpu_time(tstart)
     if((coords(n,2)<0.5d0).or.(coords(n,2)>(ly-0.5d0))  &
        .or.(vimpact(n) == .true.)) then
   !     write(6,*) " REJECTED! particle ",n
@@ -293,9 +293,9 @@ do icycle = 1,ncycle + neq
     else
       if(icycle>neq) iaccept = iaccept + 1
     endif
-    call cpu_time(tfin)
-    timer = tfin-tstart
-    tottime = tottime + timer
+!    call cpu_time(tfin)
+!    timer = tfin-tstart
+!    tottime = tottime + timer
   !
   ! update density profile: ndens is a running total of the number of particles in
   ! each bin over all the production cycles. The average occurs in the loop 
@@ -309,11 +309,11 @@ do icycle = 1,ncycle + neq
       instdens(ibin) = instdens(ibin)+1       ! of particles in each bin
       chunkdens(ibin) = chunkdens(ibin)+1
     enddo
-    vxs = (lx*2.0d0*bin*dble(ibinmin-1) &
-          - lx*bin*dble(ibinmax-ibinmin+1)*(sum(instdens(:ibinmin-1))+sum(instdens(ibinmax+1:)))/sum(instdens(ibinmin:ibinmax))) &
-          /(lx*2.0d0)
-    vxsblock = vxsblock + vxs
-    vxs = 0.0d0
+!    vxs = (lx*2.0d0*bin*dble(ibinmin-1) &
+!          - lx*bin*dble(ibinmax-ibinmin+1)*(sum(instdens(:ibinmin-1))+sum(instdens(ibinmax+1:)))/sum(instdens(ibinmin:ibinmax))) &
+!          /(lx*2.0d0)
+!    vxsblock = vxsblock + vxs
+!    vxs = 0.0d0
     nsamp = nsamp + 1  ! nsamp is number of production cycles so far
 !    write(*,*) nsamp
     if(mod(icycle,10)==0) then  ! this block outputs averages over 10 cycles
@@ -321,16 +321,24 @@ do icycle = 1,ncycle + neq
         rhoblock(ibin) = (dfloat(chunkdens(ibin))/10.0d0)/binvol 
       enddo
       write(40,300) rhoblock
-      write(80,"(F18.12)") vxsblock/10.0d0
+!      write(80,"(F18.12)") vxsblock/10.0d0
       chunkdens = 0
-      vxsblock = 0.0d0
+!      vxsblock = 0.0d0
       rhoblock = 0.0d0
     endif
     instdens = 0
   endif
+  if(mod(icycle,10000)==0) then
+    coordfile = trim(filename)//'out.txt'
+    open(21, file=coordfile, status="replace")
+    do col = 1,npart
+      write(21,100) coords(col,:)
+    enddo
+    close(21)
+  endif
 enddo
 close(40)
-close(80)
+!close(80)
 deallocate(chunkdens)
 deallocate(rhoblock)
 deallocate(instdens)
@@ -376,7 +384,7 @@ nface = (sum(rhox(:ibinmin-1))+sum(rhox(ibinmax+1:)))/(dble(ibinmin-1)*2.0d0)
 vxs = dble(ibinmin-1)*bin - (nface*dble(ibinmin-1)*bin/rhoave)
 
 coordfile = trim(filename)//'out.txt'
-open(21, file=coordfile)
+open(21, file=coordfile, status="replace")
 
 do col = 1,npart
   write(21,100) coords(col,:)
@@ -386,10 +394,10 @@ close(21)
 
 write(6,*) '# bulk density = ',rhoave
 write(6,*) '# v_excess = ',vxs
-write(6,*) "# impact time = ",tottime
-write(6,*) "# max vlist time = ", vtimemax
-write(6,*) "# list update time = ",vtime
-write(6,*) "# check time = ",ctime
+!write(6,*) "# impact time = ",tottime
+!write(6,*) "# max vlist time = ", vtimemax
+!write(6,*) "# list update time = ",vtime
+!write(6,*) "# check time = ",ctime
 write(6,*) "# of checks = ",chkcount
 write(6,*) "# of vlist updates = ",vlcount
 
